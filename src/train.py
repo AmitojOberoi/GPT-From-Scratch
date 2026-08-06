@@ -1,4 +1,5 @@
 import torch
+from dataset import TextDataset
 from tokenizer import CharacterTokenizer
 
 
@@ -38,21 +39,22 @@ def main():
 
     encoded_text = tokenizer.encode(text)
 
-    data = torch.tensor(
-        encoded_text,
-        dtype=torch.long
-    )
+    dataset = TextDataset(encoded_text)
 
-    print("\nTensor Information")
+    train_data = dataset.get_train_data()
+    val_data = dataset.get_validation_data()
+
+    print("\nDataset Information")
     print("=" * 60)
 
-    print(data[:100])
-    print(f"\nShape : {data.shape}")
-    print(f"Type  : {data.dtype}")
+    print(f"Training Tokens   : {len(train_data)}")
+    print(f"Validation Tokens : {len(val_data)}")
 
+    print("\nTraining Preview")
+    print(train_data[:100])
 
-if __name__ == "__main__":
-    main()
+    print(f"\nShape : {train_data.shape}")
+    print(f"Type  : {train_data.dtype}")
 
 
 if __name__ == "__main__":

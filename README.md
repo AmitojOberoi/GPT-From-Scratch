@@ -1,44 +1,52 @@
-# AI-LLM-From-Scratch
+# 🧠 AI-LLM-From-Scratch
 
-A GPT-style Large Language Model built from scratch using **Python** and **PyTorch**, following the fundamental concepts behind modern transformer-based language models.
+A GPT-style Large Language Model built completely from scratch using **Python** and **PyTorch**.
 
----
-
-## 📚 Project Goal
-
-The goal of this project is to understand how Large Language Models work internally by implementing every major component from scratch instead of relying on high-level libraries.
-
-The project starts with a simple character-level tokenizer and gradually progresses toward a complete GPT-style transformer capable of generating text.
+This project focuses on understanding how modern Large Language Models work internally by implementing every major component step by step—from a character-level tokenizer to a complete GPT-style Transformer.
 
 ---
 
-## 🛠️ Tech Stack
+# 📚 Project Goals
+
+- Learn how LLMs work internally
+- Implement every component instead of using high-level libraries
+- Follow professional software engineering practices
+- Build a modular, maintainable codebase
+- Document the learning process through Git commits
+
+---
+
+# 🚀 Tech Stack
 
 - Python 3
 - PyTorch
 - NumPy
 - Matplotlib
 - tqdm
+- Git & GitHub
 
 ---
 
-## 📂 Project Structure
+# 📂 Project Structure
 
-```
+```text
 AI-LLM-From-Scratch/
 │
 ├── data/
 │   └── wizard_of_oz.txt
 │
+├── models/
+│
 ├── outputs/
 │
 ├── src/
-│   ├── tokenizer.py
-│   ├── dataset.py
 │   ├── attention.py
-│   ├── model.py
-│   ├── generate.py
 │   ├── config.py
+│   ├── dataset.py
+│   ├── evaluate.py
+│   ├── generate.py
+│   ├── model.py
+│   ├── tokenizer.py
 │   ├── train.py
 │   └── utils.py
 │
@@ -49,61 +57,107 @@ AI-LLM-From-Scratch/
 
 ---
 
-## ✅ Features Implemented
+# ✅ Features Implemented
+
+### Data Pipeline
 
 - Character-level tokenizer
+- Character vocabulary generation
 - Character ↔ Integer encoding
 - Integer ↔ Character decoding
-- Vocabulary generation
 - Dataset loading
 - PyTorch tensor conversion
 - Train / Validation split
-- Modular project structure
+- Random batch generation
 
 ---
 
-## 🚧 Current Progress
+# 📈 Current Progress
 
-- [x] Project setup
-- [x] Load training corpus
+| Stage | Status |
+|-------|--------|
+| Project Setup | ✅ |
+| Dataset Loading | ✅ |
+| Character Tokenizer | ✅ |
+| Encode / Decode | ✅ |
+| PyTorch Tensor Conversion | ✅ |
+| Dataset Pipeline | ✅ |
+| Train / Validation Split | ✅ |
+| Batch Generation | ✅ |
+| Bigram Language Model | ⏳ |
+| Embedding Layer | ⏳ |
+| Training Loop | ⏳ |
+| Self-Attention | ⏳ |
+| Multi-Head Attention | ⏳ |
+| Transformer Blocks | ⏳ |
+| GPT Language Model | ⏳ |
+| Text Generation | ⏳ |
+
+---
+
+# 📖 Dataset
+
+**The Wonderful Wizard of Oz**
+
+Source: Project Gutenberg
+
+The project begins by training on a character-level representation of this public-domain novel before moving toward larger datasets.
+
+---
+
+# ▶️ Running the Project
+
+Clone the repository:
+
+```bash
+git clone https://github.com/AmitojOberoi/llm-from-scratch.git
+```
+
+Install dependencies:
+
+```bash
+pip install -r requirements.txt
+```
+
+Run the training script:
+
+```bash
+python src/train.py
+```
+
+---
+
+# 🛣️ Roadmap
+
 - [x] Character-level tokenizer
-- [x] Encode / Decode pipeline
-- [x] Convert dataset to PyTorch tensors
-- [x] Train / Validation split
-- [ ] Batch generation
-- [ ] Bigram language model
+- [x] Dataset pipeline
+- [x] Batch generation
+- [ ] Bigram Language Model
 - [ ] Embedding layer
 - [ ] Training loop
 - [ ] Self-attention
 - [ ] Multi-head attention
 - [ ] Transformer blocks
 - [ ] GPT Language Model
-- [ ] Text generation
 - [ ] Model checkpoints
+- [ ] Text generation
 
 ---
 
-## 📖 Dataset
+# 🎯 Learning Objectives
 
-**The Wonderful Wizard of Oz**
+This repository is intended as a hands-on implementation of the core concepts behind transformer-based language models, including:
 
-Source: Project Gutenberg
-
-The initial implementation uses this public-domain book to build and train the first character-level language model.
-
----
-
-## 🚀 Future Improvements
-
-- OpenWebText pretraining
-- Model checkpoint saving/loading
-- Command-line inference
-- Better tokenizer
-- Byte Pair Encoding (BPE)
-- Fine-tuning support
+- Tokenization
+- Language modeling
+- Embeddings
+- Self-attention
+- Multi-head attention
+- Transformer architecture
+- Autoregressive text generation
 
 ---
 
-## 📜 License
+# 📄 License
 
-This project is intended for educational purposes while learning how transformer-based language models work.
+This project is intended for educational and learning purposes.

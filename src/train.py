@@ -1,17 +1,30 @@
 import torch
+
+from config import RANDOM_SEED
 from dataset import TextDataset
 from tokenizer import CharacterTokenizer
+
+# ------------------------------------------------------
+# Reproducibility
+# ------------------------------------------------------
+
+torch.manual_seed(RANDOM_SEED)
 
 
 def load_text(path):
     """
-    Load training corpus.
+    Load the training corpus.
     """
+
     with open(path, "r", encoding="utf-8") as file:
         return file.read()
 
 
 def main():
+
+    # --------------------------------------------------
+    # Load Dataset
+    # --------------------------------------------------
 
     text = load_text("data/wizard_of_oz.txt")
 
@@ -20,6 +33,10 @@ def main():
     print("=" * 60)
 
     print(text[:300])
+
+    # --------------------------------------------------
+    # Tokenizer
+    # --------------------------------------------------
 
     tokenizer = CharacterTokenizer(text)
 
@@ -33,22 +50,13 @@ def main():
     print("Encoded  :", encoded)
     print("Decoded  :", tokenizer.decode(encoded))
 
-    # ---------------------------------------------------
-    # Convert the complete dataset into a PyTorch tensor
-    # ---------------------------------------------------
+    # --------------------------------------------------
+    # Dataset
+    # --------------------------------------------------
 
     encoded_text = tokenizer.encode(text)
 
     dataset = TextDataset(encoded_text)
-    x, y = dataset.get_batch()
-    print("\nBatch Information")
-    print("=" * 60)
-
-    print("Inputs")
-    print(x)
-
-    print("\nTargets")
-    print(y)
 
     train_data = dataset.get_train_data()
     val_data = dataset.get_validation_data()
@@ -64,6 +72,21 @@ def main():
 
     print(f"\nShape : {train_data.shape}")
     print(f"Type  : {train_data.dtype}")
+
+    # --------------------------------------------------
+    # Batch Generation
+    # --------------------------------------------------
+
+    x, y = dataset.get_batch()
+
+    print("\nBatch Information")
+    print("=" * 60)
+
+    print("\nInputs")
+    print(x)
+
+    print("\nTargets")
+    print(y)
 
 
 if __name__ == "__main__":

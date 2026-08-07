@@ -1,5 +1,7 @@
 import torch
 
+from config import TRAIN_RATIO, BLOCK_SIZE, BATCH_SIZE
+
 
 class TextDataset:
     """
@@ -9,9 +11,9 @@ class TextDataset:
     def __init__(
         self,
         encoded_text,
-        train_ratio=0.9,
-        block_size=8,
-        batch_size=4,
+        train_ratio=TRAIN_RATIO,
+        block_size=BLOCK_SIZE,
+        batch_size=BATCH_SIZE,
     ):
 
         self.data = torch.tensor(
@@ -28,28 +30,37 @@ class TextDataset:
         self.batch_size = batch_size
 
     def get_train_data(self):
+        """
+        Return training data.
+        """
         return self.train_data
 
     def get_validation_data(self):
+        """
+        Return validation data.
+        """
         return self.val_data
 
     def get_batch(self, split="train"):
+        """
+        Generate one batch of input and target sequences.
+        """
 
         data = self.train_data if split == "train" else self.val_data
 
-        ix = torch.randint(
+        indices = torch.randint(
             len(data) - self.block_size,
             (self.batch_size,)
         )
 
         x = torch.stack([
             data[i:i + self.block_size]
-            for i in ix
+            for i in indices
         ])
 
         y = torch.stack([
             data[i + 1:i + self.block_size + 1]
-            for i in ix
+            for i in indices
         ])
 
         return x, y

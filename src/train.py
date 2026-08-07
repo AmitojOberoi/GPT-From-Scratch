@@ -40,6 +40,15 @@ def main():
     encoded_text = tokenizer.encode(text)
 
     dataset = TextDataset(encoded_text)
+    x, y = dataset.get_batch()
+    print("\nBatch Information")
+    print("=" * 60)
+
+    print("Inputs")
+    print(x)
+
+    print("\nTargets")
+    print(y)
 
     train_data = dataset.get_train_data()
     val_data = dataset.get_validation_data()

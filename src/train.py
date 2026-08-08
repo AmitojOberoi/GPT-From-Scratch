@@ -1,5 +1,7 @@
-import torch
+from pyexpat import model
 
+import torch
+from model import BigramLanguageModel
 from config import RANDOM_SEED
 from dataset import TextDataset
 from tokenizer import CharacterTokenizer
@@ -78,6 +80,20 @@ def main():
     # --------------------------------------------------
 
     x, y = dataset.get_batch()
+
+   
+# Bigram Language Model
+
+
+    model = BigramLanguageModel(tokenizer.vocab_size)
+
+    logits = model(x)
+
+    print("\nModel Information")
+    print("=" * 60)
+
+    print("Input Shape :", x.shape)
+    print("Logits Shape:", logits.shape)
 
     print("\nBatch Information")
     print("=" * 60)

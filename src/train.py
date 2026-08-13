@@ -5,6 +5,7 @@ from config import (
     LEARNING_RATE,
     MAX_ITERS,
     EVAL_INTERVAL,
+    GENERATE_TOKENS,
 )
 
 from dataset import TextDataset
@@ -19,14 +20,15 @@ from tokenizer import CharacterTokenizer
 torch.manual_seed(RANDOM_SEED)
 
 
+# ======================================================
+# Loss Evaluation
+# ======================================================
+
 @torch.no_grad()
 def estimate_loss(model, dataset, eval_iters=100):
     """
     Estimate average loss on the training and
     validation datasets.
-
-    Gradients are disabled because this function
-    only evaluates the model.
     """
 
     model.eval()
@@ -52,6 +54,10 @@ def estimate_loss(model, dataset, eval_iters=100):
     return losses
 
 
+# ======================================================
+# Data Loading
+# ======================================================
+
 def load_text(path):
     """
     Load the training corpus.
@@ -67,13 +73,19 @@ def load_text(path):
         return file.read()
 
 
+# ======================================================
+# Main Training Pipeline
+# ======================================================
+
 def main():
 
     # ==================================================
     # Load Dataset
     # ==================================================
 
-    text = load_text("data/wizard_of_oz.txt")
+    text = load_text(
+        "data/wizard_of_oz.txt"
+    )
 
     print("=" * 60)
     print("Preview")
@@ -87,7 +99,10 @@ def main():
 
     tokenizer = CharacterTokenizer(text)
 
-    print("\nVocabulary Size:", tokenizer.vocab_size)
+    print(
+        "\nVocabulary Size:",
+        tokenizer.vocab_size
+    )
 
     sample = "hello"
 
@@ -95,7 +110,10 @@ def main():
 
     print("\nOriginal :", sample)
     print("Encoded  :", encoded)
-    print("Decoded  :", tokenizer.decode(encoded))
+    print(
+        "Decoded  :",
+        tokenizer.decode(encoded)
+    )
 
     # ==================================================
     # Dataset
@@ -111,14 +129,31 @@ def main():
     print("\nDataset Information")
     print("=" * 60)
 
-    print(f"Training Tokens   : {len(train_data)}")
-    print(f"Validation Tokens : {len(val_data)}")
+    print(
+        f"Training Tokens   : "
+        f"{len(train_data)}"
+    )
+
+    print(
+        f"Validation Tokens : "
+        f"{len(val_data)}"
+    )
 
     print("\nTraining Preview")
-    print(train_data[:100])
 
-    print(f"\nShape : {train_data.shape}")
-    print(f"Type  : {train_data.dtype}")
+    print(
+        train_data[:100]
+    )
+
+    print(
+        f"\nShape : "
+        f"{train_data.shape}"
+    )
+
+    print(
+        f"Type  : "
+        f"{train_data.dtype}"
+    )
 
     # ==================================================
     # Batch Generation
@@ -152,14 +187,28 @@ def main():
     # Initial Forward Pass
     # ==================================================
 
-    logits, loss = model(x, y)
+    logits, initial_loss = model(
+        x,
+        y
+    )
 
     print("\nInitial Model Information")
     print("=" * 60)
 
-    print("Input Shape :", x.shape)
-    print("Logits Shape:", logits.shape)
-    print("Initial Loss:", loss.item())
+    print(
+        "Input Shape :",
+        x.shape
+    )
+
+    print(
+        "Logits Shape:",
+        logits.shape
+    )
+
+    print(
+        "Initial Loss:",
+        initial_loss.item()
+    )
 
     # ==================================================
     # Optimizer
@@ -192,24 +241,31 @@ def main():
 
             print(
                 f"Step {step:4d} | "
-                f"Train Loss: {losses['train']:.4f} | "
-                f"Val Loss: {losses['val']:.4f}"
+                f"Train Loss: "
+                f"{losses['train']:.4f} | "
+                f"Val Loss: "
+                f"{losses['val']:.4f}"
             )
 
         # ------------------------------------------------
         # Get training batch
         # ------------------------------------------------
 
-        x, y = dataset.get_batch("train")
+        x, y = dataset.get_batch(
+            "train"
+        )
 
         # ------------------------------------------------
-        # Forward pass
+        # Forward Pass
         # ------------------------------------------------
 
-        logits, loss = model(x, y)
+        logits, loss = model(
+            x,
+            y
+        )
 
         # ------------------------------------------------
-        # Clear previous gradients
+        # Clear Gradients
         # ------------------------------------------------
 
         optimizer.zero_grad(
@@ -223,7 +279,7 @@ def main():
         loss.backward()
 
         # ------------------------------------------------
-        # Update model parameters
+        # Update Parameters
         # ------------------------------------------------
 
         optimizer.step()
@@ -250,6 +306,44 @@ def main():
         f"{final_losses['val']:.4f}"
     )
 
+    # ==================================================
+    # Text Generation
+    # ==================================================
+
+    print("\nGenerated Text")
+    print("=" * 60)
+
+    # Starting character.
+    start_text = "D"
+
+    # Convert starting character to token ID.
+    start_tokens = tokenizer.encode(
+        start_text
+    )
+
+    # Convert token IDs to a PyTorch tensor.
+    context = torch.tensor(
+        [start_tokens],
+        dtype=torch.long
+    )
+
+    # Generate new tokens.
+    generated_tokens = model.generate(
+        context,
+        max_new_tokens=GENERATE_TOKENS
+    )
+
+    # Convert generated token IDs back to text.
+    generated_text = tokenizer.decode(
+        generated_tokens[0].tolist()
+    )
+
+    print(generated_text)
+
+
+# ======================================================
+# Program Entry Point
+# ======================================================
 
 if __name__ == "__main__":
     main()

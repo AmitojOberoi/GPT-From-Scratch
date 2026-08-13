@@ -1,14 +1,14 @@
-from pyexpat import model
-
 import torch
-from model import BigramLanguageModel
+
 from config import RANDOM_SEED
 from dataset import TextDataset
+from model import BigramLanguageModel
 from tokenizer import CharacterTokenizer
 
-# ------------------------------------------------------
+
+# ======================================================
 # Reproducibility
-# ------------------------------------------------------
+# ======================================================
 
 torch.manual_seed(RANDOM_SEED)
 
@@ -17,16 +17,15 @@ def load_text(path):
     """
     Load the training corpus.
     """
-
     with open(path, "r", encoding="utf-8") as file:
         return file.read()
 
 
 def main():
 
-    # --------------------------------------------------
+    # ==================================================
     # Load Dataset
-    # --------------------------------------------------
+    # ==================================================
 
     text = load_text("data/wizard_of_oz.txt")
 
@@ -36,9 +35,9 @@ def main():
 
     print(text[:300])
 
-    # --------------------------------------------------
+    # ==================================================
     # Tokenizer
-    # --------------------------------------------------
+    # ==================================================
 
     tokenizer = CharacterTokenizer(text)
 
@@ -52,9 +51,9 @@ def main():
     print("Encoded  :", encoded)
     print("Decoded  :", tokenizer.decode(encoded))
 
-    # --------------------------------------------------
+    # ==================================================
     # Dataset
-    # --------------------------------------------------
+    # ==================================================
 
     encoded_text = tokenizer.encode(text)
 
@@ -75,25 +74,11 @@ def main():
     print(f"\nShape : {train_data.shape}")
     print(f"Type  : {train_data.dtype}")
 
-    # --------------------------------------------------
+    # ==================================================
     # Batch Generation
-    # --------------------------------------------------
+    # ==================================================
 
     x, y = dataset.get_batch()
-
-   
-# Bigram Language Model
-
-
-    model = BigramLanguageModel(tokenizer.vocab_size)
-
-    logits = model(x)
-
-    print("\nModel Information")
-    print("=" * 60)
-
-    print("Input Shape :", x.shape)
-    print("Logits Shape:", logits.shape)
 
     print("\nBatch Information")
     print("=" * 60)
@@ -103,6 +88,28 @@ def main():
 
     print("\nTargets")
     print(y)
+
+    # ==================================================
+    # Bigram Language Model
+    # ==================================================
+
+    model = BigramLanguageModel(tokenizer.vocab_size)
+
+    logits, loss = model(x, y)
+
+    print("\nModel Information")
+    print("=" * 60)
+
+    print("\nModel Architecture")
+    print(model)
+
+    print("\nInput Shape :", x.shape)
+    print("Logits Shape:", logits.shape)
+
+    print("\nLoss Information")
+    print("=" * 60)
+
+    print("Loss:", loss.item())
 
 
 if __name__ == "__main__":

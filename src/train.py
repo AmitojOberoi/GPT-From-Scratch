@@ -4,7 +4,9 @@ from config import (
     RANDOM_SEED,
     LEARNING_RATE,
     MAX_ITERS,
+    EVAL_INTERVAL,
 )
+
 from dataset import TextDataset
 from model import BigramLanguageModel
 from tokenizer import CharacterTokenizer
@@ -15,6 +17,39 @@ from tokenizer import CharacterTokenizer
 # ======================================================
 
 torch.manual_seed(RANDOM_SEED)
+
+
+@torch.no_grad()
+def estimate_loss(model, dataset, eval_iters=100):
+    """
+    Estimate average loss on the training and
+    validation datasets.
+
+    Gradients are disabled because this function
+    only evaluates the model.
+    """
+
+    model.eval()
+
+    losses = {}
+
+    for split in ["train", "val"]:
+
+        split_losses = torch.zeros(eval_iters)
+
+        for k in range(eval_iters):
+
+            x, y = dataset.get_batch(split)
+
+            _, loss = model(x, y)
+
+            split_losses[k] = loss.item()
+
+        losses[split] = split_losses.mean().item()
+
+    model.train()
+
+    return losses
 
 
 def load_text(path):
@@ -86,7 +121,7 @@ def main():
     print(f"Type  : {train_data.dtype}")
 
     # ==================================================
-    # Initial Batch
+    # Batch Generation
     # ==================================================
 
     x, y = dataset.get_batch()
@@ -145,7 +180,24 @@ def main():
     for step in range(MAX_ITERS):
 
         # ------------------------------------------------
-        # Get a new batch
+        # Evaluate periodically
+        # ------------------------------------------------
+
+        if step % EVAL_INTERVAL == 0:
+
+            losses = estimate_loss(
+                model,
+                dataset
+            )
+
+            print(
+                f"Step {step:4d} | "
+                f"Train Loss: {losses['train']:.4f} | "
+                f"Val Loss: {losses['val']:.4f}"
+            )
+
+        # ------------------------------------------------
+        # Get training batch
         # ------------------------------------------------
 
         x, y = dataset.get_batch("train")
@@ -160,7 +212,9 @@ def main():
         # Clear previous gradients
         # ------------------------------------------------
 
-        optimizer.zero_grad(set_to_none=True)
+        optimizer.zero_grad(
+            set_to_none=True
+        )
 
         # ------------------------------------------------
         # Backpropagation
@@ -174,25 +228,27 @@ def main():
 
         optimizer.step()
 
-        # ------------------------------------------------
-        # Report progress
-        # ------------------------------------------------
-
-        if step % 100 == 0:
-
-            print(
-                f"Step {step:4d} | "
-                f"Loss: {loss.item():.4f}"
-            )
-
     # ==================================================
-    # Final Loss
+    # Final Evaluation
     # ==================================================
+
+    final_losses = estimate_loss(
+        model,
+        dataset
+    )
 
     print("\nTraining Complete")
     print("=" * 60)
 
-    print(f"Final Loss: {loss.item():.4f}")
+    print(
+        f"Final Train Loss: "
+        f"{final_losses['train']:.4f}"
+    )
+
+    print(
+        f"Final Val Loss  : "
+        f"{final_losses['val']:.4f}"
+    )
 
 
 if __name__ == "__main__":

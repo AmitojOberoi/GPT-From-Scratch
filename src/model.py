@@ -20,18 +20,24 @@ class BigramLanguageModel(nn.Module):
         )
 
     def forward(self, index, targets=None):
+        """
+        Perform a forward pass.
 
-        # Generate logits for each input token.
+        Args:
+            index: Input token IDs.
+            targets: Expected next-token IDs.
+
+        Returns:
+            logits: Model predictions.
+            loss: Cross-entropy loss if targets are provided.
+        """
+
         logits = self.token_embedding_table(index)
 
         loss = None
 
         if targets is not None:
 
-            # Flatten logits and targets so that
-            # cross-entropy can compare every prediction
-            # with its correct target.
-            
             batch_size, sequence_length, vocab_size = logits.shape
 
             logits = logits.view(

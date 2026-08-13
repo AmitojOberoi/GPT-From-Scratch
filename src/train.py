@@ -1,6 +1,10 @@
 import torch
 
-from config import RANDOM_SEED
+from config import (
+    RANDOM_SEED,
+    LEARNING_RATE,
+    MAX_ITERS,
+)
 from dataset import TextDataset
 from model import BigramLanguageModel
 from tokenizer import CharacterTokenizer
@@ -16,7 +20,14 @@ torch.manual_seed(RANDOM_SEED)
 def load_text(path):
     """
     Load the training corpus.
+
+    Args:
+        path: Path to the text file.
+
+    Returns:
+        The complete text corpus as a string.
     """
+
     with open(path, "r", encoding="utf-8") as file:
         return file.read()
 
@@ -75,7 +86,7 @@ def main():
     print(f"Type  : {train_data.dtype}")
 
     # ==================================================
-    # Batch Generation
+    # Initial Batch
     # ==================================================
 
     x, y = dataset.get_batch()
@@ -93,23 +104,95 @@ def main():
     # Bigram Language Model
     # ==================================================
 
-    model = BigramLanguageModel(tokenizer.vocab_size)
+    model = BigramLanguageModel(
+        tokenizer.vocab_size
+    )
+
+    print("\nModel Architecture")
+    print("=" * 60)
+
+    print(model)
+
+    # ==================================================
+    # Initial Forward Pass
+    # ==================================================
 
     logits, loss = model(x, y)
 
-    print("\nModel Information")
+    print("\nInitial Model Information")
     print("=" * 60)
 
-    print("\nModel Architecture")
-    print(model)
-
-    print("\nInput Shape :", x.shape)
+    print("Input Shape :", x.shape)
     print("Logits Shape:", logits.shape)
+    print("Initial Loss:", loss.item())
 
-    print("\nLoss Information")
+    # ==================================================
+    # Optimizer
+    # ==================================================
+
+    optimizer = torch.optim.AdamW(
+        model.parameters(),
+        lr=LEARNING_RATE
+    )
+
+    # ==================================================
+    # Training Loop
+    # ==================================================
+
+    print("\nStarting Training")
     print("=" * 60)
 
-    print("Loss:", loss.item())
+    for step in range(MAX_ITERS):
+
+        # ------------------------------------------------
+        # Get a new batch
+        # ------------------------------------------------
+
+        x, y = dataset.get_batch("train")
+
+        # ------------------------------------------------
+        # Forward pass
+        # ------------------------------------------------
+
+        logits, loss = model(x, y)
+
+        # ------------------------------------------------
+        # Clear previous gradients
+        # ------------------------------------------------
+
+        optimizer.zero_grad(set_to_none=True)
+
+        # ------------------------------------------------
+        # Backpropagation
+        # ------------------------------------------------
+
+        loss.backward()
+
+        # ------------------------------------------------
+        # Update model parameters
+        # ------------------------------------------------
+
+        optimizer.step()
+
+        # ------------------------------------------------
+        # Report progress
+        # ------------------------------------------------
+
+        if step % 100 == 0:
+
+            print(
+                f"Step {step:4d} | "
+                f"Loss: {loss.item():.4f}"
+            )
+
+    # ==================================================
+    # Final Loss
+    # ==================================================
+
+    print("\nTraining Complete")
+    print("=" * 60)
+
+    print(f"Final Loss: {loss.item():.4f}")
 
 
 if __name__ == "__main__":

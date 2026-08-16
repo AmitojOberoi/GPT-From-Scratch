@@ -7,7 +7,7 @@ from config import BLOCK_SIZE
 
 class SelfAttentionHead(nn.Module):
     """
-    Single self-attention head.
+    A single self-attention head.
 
     Implements:
 
@@ -20,10 +20,6 @@ class SelfAttentionHead(nn.Module):
 
     def __init__(self, embedding_size, head_size):
         super().__init__()
-
-        # --------------------------------------------------
-        # Learned Query, Key and Value projections
-        # --------------------------------------------------
 
         self.query = nn.Linear(
             embedding_size,
@@ -43,12 +39,6 @@ class SelfAttentionHead(nn.Module):
             bias=False
         )
 
-        # --------------------------------------------------
-        # Causal mask
-        #
-        # A token should not be able to see future tokens.
-        # --------------------------------------------------
-
         self.register_buffer(
             "tril",
             torch.tril(
@@ -62,51 +52,21 @@ class SelfAttentionHead(nn.Module):
         self.head_size = head_size
 
     def forward(self, x):
-        """
-        Perform scaled dot-product self-attention.
 
-        Args:
-            x: Input tensor of shape
-               (batch, sequence_length, embedding_size)
+        batch_size, sequence_length, _ = x.shape
 
-        Returns:
-            Attention output.
-        """
-
-        # --------------------------------------------------
-        # Create Query, Key and Value
-        # --------------------------------------------------
-
+        # Query, Key and Value
         query = self.query(x)
-
         key = self.key(x)
-
         value = self.value(x)
 
-        # --------------------------------------------------
-        # Calculate attention scores
-        #
         # QK^T
-        # --------------------------------------------------
-
         scores = query @ key.transpose(-2, -1)
 
-        # --------------------------------------------------
-        # Scale attention scores
-        #
-        # QK^T / sqrt(d_k)
-        # --------------------------------------------------
-
+        # Scale by sqrt(d_k)
         scores = scores / (self.head_size ** 0.5)
 
-        # --------------------------------------------------
-        # Apply causal mask
-        #
-        # Future tokens are hidden.
-        # --------------------------------------------------
-
-        sequence_length = x.shape[1]
-
+        # Causal masking
         mask = self.tril[
             :sequence_length,
             :sequence_length
@@ -117,20 +77,69 @@ class SelfAttentionHead(nn.Module):
             float("-inf")
         )
 
-        # --------------------------------------------------
-        # Convert scores into probabilities
-        # --------------------------------------------------
-
+        # Softmax
         attention_weights = F.softmax(
             scores,
             dim=-1
         )
 
-        # --------------------------------------------------
-        # Weighted sum of Values
-        # --------------------------------------------------
-
+        # Weighted values
         output = attention_weights @ value
+
+        return output
+
+
+class MultiHeadAttention(nn.Module):
+    """
+    Multiple self-attention heads running in parallel.
+
+    Each head learns a different representation of
+    relationships between tokens.
+    """
+
+    def __init__(
+        self,
+        embedding_size,
+        num_heads
+    ):
+        super().__init__()
+
+        assert embedding_size % num_heads == 0
+
+        head_size = embedding_size // num_heads
+
+        self.heads = nn.ModuleList(
+            [
+                SelfAttentionHead(
+                    embedding_size,
+                    head_size
+                )
+                for _ in range(num_heads)
+            ]
+        )
+
+        # Mix information from all attention heads.
+        self.projection = nn.Linear(
+            embedding_size,
+            embedding_size
+        )
+
+    def forward(self, x):
+
+        # Run every attention head.
+        outputs = [
+            head(x)
+            for head in self.heads
+        ]
+
+        # Concatenate along the embedding dimension.
+        output = torch.cat(
+            outputs,
+            dim=-1
+        )
+
+        # Final linear projection.
+        output = self.projection(output)
 
         return output
 
@@ -144,10 +153,10 @@ def main():
     batch_size = 4
     sequence_length = 8
     embedding_size = 32
-    head_size = 16
+    num_heads = 4
 
     # ==================================================
-    # Create Example Input
+    # Example Input
     # ==================================================
 
     x = torch.randn(
@@ -157,78 +166,71 @@ def main():
     )
 
     print("=" * 60)
-    print("Scaled Dot-Product Self-Attention")
+    print("Multi-Head Self-Attention")
     print("=" * 60)
 
     print("\nInput Shape:")
     print(x.shape)
 
     # ==================================================
-    # Create Attention Head
+    # Create Multi-Head Attention
     # ==================================================
 
-    attention_head = SelfAttentionHead(
+    multi_head_attention = MultiHeadAttention(
         embedding_size=embedding_size,
-        head_size=head_size
+        num_heads=num_heads
     )
 
-    print("\nAttention Head")
+    print("\nArchitecture")
     print("=" * 60)
 
-    print(attention_head)
+    print(multi_head_attention)
 
     # ==================================================
     # Forward Pass
     # ==================================================
 
-    output = attention_head(x)
+    output = multi_head_attention(x)
 
     print("\nOutput Shape:")
     print(output.shape)
 
     # ==================================================
-    # Parameter Information
+    # Head Information
     # ==================================================
 
-    print("\nParameter Information")
+    head_size = embedding_size // num_heads
+
+    print("\nAttention Configuration")
     print("=" * 60)
 
     print(
-        "Query Parameters :",
-        sum(
-            p.numel()
-            for p in attention_head.query.parameters()
-        )
+        "Embedding Size :",
+        embedding_size
     )
 
     print(
-        "Key Parameters   :",
-        sum(
-            p.numel()
-            for p in attention_head.key.parameters()
-        )
+        "Number of Heads:",
+        num_heads
     )
 
     print(
-        "Value Parameters :",
-        sum(
-            p.numel()
-            for p in attention_head.value.parameters()
-        )
+        "Head Size      :",
+        head_size
     )
 
     # ==================================================
-    # Verify Causal Attention
+    # Parameter Count
     # ==================================================
 
-    print("\nCausal Mask")
-    print("=" * 60)
+    parameter_count = sum(
+        parameter.numel()
+        for parameter in multi_head_attention.parameters()
+    )
 
     print(
-        attention_head.tril[
-            :sequence_length,
-            :sequence_length
-        ]
+        "\nTotal Parameters:",
+        parameter_count
     )
 
 

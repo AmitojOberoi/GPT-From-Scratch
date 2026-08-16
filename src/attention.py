@@ -7,7 +7,7 @@ from config import BLOCK_SIZE
 
 class SelfAttentionHead(nn.Module):
     """
-    A single self-attention head.
+    A single causal self-attention head.
 
     Implements:
 
@@ -53,20 +53,16 @@ class SelfAttentionHead(nn.Module):
 
     def forward(self, x):
 
-        batch_size, sequence_length, _ = x.shape
+        _, sequence_length, _ = x.shape
 
-        # Query, Key and Value
         query = self.query(x)
         key = self.key(x)
         value = self.value(x)
 
-        # QK^T
         scores = query @ key.transpose(-2, -1)
 
-        # Scale by sqrt(d_k)
         scores = scores / (self.head_size ** 0.5)
 
-        # Causal masking
         mask = self.tril[
             :sequence_length,
             :sequence_length
@@ -77,13 +73,11 @@ class SelfAttentionHead(nn.Module):
             float("-inf")
         )
 
-        # Softmax
         attention_weights = F.softmax(
             scores,
             dim=-1
         )
 
-        # Weighted values
         output = attention_weights @ value
 
         return output
@@ -92,9 +86,6 @@ class SelfAttentionHead(nn.Module):
 class MultiHeadAttention(nn.Module):
     """
     Multiple self-attention heads running in parallel.
-
-    Each head learns a different representation of
-    relationships between tokens.
     """
 
     def __init__(
@@ -118,7 +109,6 @@ class MultiHeadAttention(nn.Module):
             ]
         )
 
-        # Mix information from all attention heads.
         self.projection = nn.Linear(
             embedding_size,
             embedding_size
@@ -126,22 +116,117 @@ class MultiHeadAttention(nn.Module):
 
     def forward(self, x):
 
-        # Run every attention head.
         outputs = [
             head(x)
             for head in self.heads
         ]
 
-        # Concatenate along the embedding dimension.
         output = torch.cat(
             outputs,
             dim=-1
         )
 
-        # Final linear projection.
         output = self.projection(output)
 
         return output
+
+
+class FeedForward(nn.Module):
+    """
+    Position-wise feed-forward neural network.
+
+    Expands the embedding dimension, applies a
+    non-linear activation, then projects back.
+    """
+
+    def __init__(self, embedding_size):
+        super().__init__()
+
+        self.network = nn.Sequential(
+            nn.Linear(
+                embedding_size,
+                4 * embedding_size
+            ),
+
+            nn.ReLU(),
+
+            nn.Linear(
+                4 * embedding_size,
+                embedding_size
+            )
+        )
+
+    def forward(self, x):
+
+        return self.network(x)
+
+
+class TransformerBlock(nn.Module):
+    """
+    A single Transformer block.
+
+    Architecture:
+
+        Input
+          ↓
+        LayerNorm
+          ↓
+        Multi-Head Attention
+          ↓
+        Residual Connection
+          ↓
+        LayerNorm
+          ↓
+        Feed Forward
+          ↓
+        Residual Connection
+          ↓
+        Output
+    """
+
+    def __init__(
+        self,
+        embedding_size,
+        num_heads
+    ):
+        super().__init__()
+
+        self.attention = MultiHeadAttention(
+            embedding_size,
+            num_heads
+        )
+
+        self.feed_forward = FeedForward(
+            embedding_size
+        )
+
+        self.layer_norm_1 = nn.LayerNorm(
+            embedding_size
+        )
+
+        self.layer_norm_2 = nn.LayerNorm(
+            embedding_size
+        )
+
+    def forward(self, x):
+
+        # ----------------------------------------------
+        # Attention + Residual Connection
+        # ----------------------------------------------
+
+        x = x + self.attention(
+            self.layer_norm_1(x)
+        )
+
+        # ----------------------------------------------
+        # Feed Forward + Residual Connection
+        # ----------------------------------------------
+
+        x = x + self.feed_forward(
+            self.layer_norm_2(x)
+        )
+
+        return x
 
 
 def main():
@@ -166,17 +251,17 @@ def main():
     )
 
     print("=" * 60)
-    print("Multi-Head Self-Attention")
+    print("Transformer Block")
     print("=" * 60)
 
     print("\nInput Shape:")
     print(x.shape)
 
     # ==================================================
-    # Create Multi-Head Attention
+    # Transformer Block
     # ==================================================
 
-    multi_head_attention = MultiHeadAttention(
+    transformer_block = TransformerBlock(
         embedding_size=embedding_size,
         num_heads=num_heads
     )
@@ -184,40 +269,16 @@ def main():
     print("\nArchitecture")
     print("=" * 60)
 
-    print(multi_head_attention)
+    print(transformer_block)
 
     # ==================================================
     # Forward Pass
     # ==================================================
 
-    output = multi_head_attention(x)
+    output = transformer_block(x)
 
     print("\nOutput Shape:")
     print(output.shape)
-
-    # ==================================================
-    # Head Information
-    # ==================================================
-
-    head_size = embedding_size // num_heads
-
-    print("\nAttention Configuration")
-    print("=" * 60)
-
-    print(
-        "Embedding Size :",
-        embedding_size
-    )
-
-    print(
-        "Number of Heads:",
-        num_heads
-    )
-
-    print(
-        "Head Size      :",
-        head_size
-    )
 
     # ==================================================
     # Parameter Count
@@ -225,13 +286,11 @@ def main():
 
     parameter_count = sum(
         parameter.numel()
-        for parameter in multi_head_attention.parameters()
+        for parameter in transformer_block.parameters()
     )
 
-    print(
-        "\nTotal Parameters:",
-        parameter_count
-    )
+    print("\nTotal Parameters:")
+    print(parameter_count)
 
 
 if __name__ == "__main__":

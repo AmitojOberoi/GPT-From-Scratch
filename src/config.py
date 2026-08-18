@@ -48,6 +48,13 @@ GENERATE_TOKENS = 300
 
 
 # ======================================================
+# Checkpoint
+# ======================================================
+
+CHECKPOINT_PATH = "models/gpt_wizard_of_oz.pth"
+
+
+# ======================================================
 # Reproducibility
 # ======================================================
 
@@ -58,4 +65,6 @@ RANDOM_SEED = 1337
 # Device
 # ======================================================
 
-DEVICE = "cuda" if __import__("torch").cuda.is_available() else "cpu"
+import torch
+
+DEVICE = "cuda" if torch.cuda.is_available() else "cpu"

@@ -1,3 +1,5 @@
+import os
+
 import torch
 
 from config import (
@@ -10,7 +12,9 @@ from config import (
     EMBEDDING_SIZE,
     NUM_HEADS,
     NUM_LAYERS,
+    BLOCK_SIZE,
     DEVICE,
+    CHECKPOINT_PATH,
 )
 
 from dataset import TextDataset
@@ -22,9 +26,7 @@ from tokenizer import CharacterTokenizer
 # Reproducibility
 # ======================================================
 
-torch.manual_seed(
-    RANDOM_SEED
-)
+torch.manual_seed(RANDOM_SEED)
 
 
 # ======================================================
@@ -32,10 +34,7 @@ torch.manual_seed(
 # ======================================================
 
 @torch.no_grad()
-def estimate_loss(
-    model,
-    dataset
-):
+def estimate_loss(model, dataset):
     """
     Estimate average training and validation loss.
     """
@@ -44,36 +43,22 @@ def estimate_loss(
 
     losses = {}
 
-    for split in [
-        "train",
-        "val"
-    ]:
+    for split in ["train", "val"]:
 
-        split_losses = torch.zeros(
-            EVAL_ITERS
-        )
+        split_losses = torch.zeros(EVAL_ITERS)
 
-        for k in range(
-            EVAL_ITERS
-        ):
+        for k in range(EVAL_ITERS):
 
-            x, y = dataset.get_batch(
-                split
-            )
+            x, y = dataset.get_batch(split)
 
             x = x.to(DEVICE)
             y = y.to(DEVICE)
 
-            _, loss = model(
-                x,
-                y
-            )
+            _, loss = model(x, y)
 
             split_losses[k] = loss.item()
 
-        losses[split] = (
-            split_losses.mean().item()
-        )
+        losses[split] = split_losses.mean().item()
 
     model.train()
 
@@ -99,7 +84,7 @@ def load_text(path):
 
 
 # ======================================================
-# Main
+# Main Training Pipeline
 # ======================================================
 
 def main():
@@ -119,17 +104,13 @@ def main():
     print("\nCorpus Preview")
     print("-" * 60)
 
-    print(
-        text[:300]
-    )
+    print(text[:300])
 
     # ==================================================
     # Tokenizer
     # ==================================================
 
-    tokenizer = CharacterTokenizer(
-        text
-    )
+    tokenizer = CharacterTokenizer(text)
 
     print(
         "\nVocabulary Size:",
@@ -140,21 +121,12 @@ def main():
     # Encode Dataset
     # ==================================================
 
-    encoded_text = tokenizer.encode(
-        text
-    )
+    encoded_text = tokenizer.encode(text)
 
-    dataset = TextDataset(
-        encoded_text
-    )
+    dataset = TextDataset(encoded_text)
 
-    train_data = (
-        dataset.get_train_data()
-    )
-
-    validation_data = (
-        dataset.get_validation_data()
-    )
+    train_data = dataset.get_train_data()
+    validation_data = dataset.get_validation_data()
 
     print("\nDataset Information")
     print("=" * 60)
@@ -179,7 +151,7 @@ def main():
     )
 
     # ==================================================
-    # Create GPT Model
+    # Model
     # ==================================================
 
     model = GPTLanguageModel(
@@ -189,9 +161,7 @@ def main():
         num_layers=NUM_LAYERS
     )
 
-    model = model.to(
-        DEVICE
-    )
+    model = model.to(DEVICE)
 
     # ==================================================
     # Model Information
@@ -221,6 +191,11 @@ def main():
     )
 
     print(
+        "Context Length:",
+        BLOCK_SIZE
+    )
+
+    print(
         "Total Parameters:",
         parameter_count
     )
@@ -241,12 +216,10 @@ def main():
     print("\nStarting Training")
     print("=" * 60)
 
-    for step in range(
-        MAX_ITERS
-    ):
+    for step in range(MAX_ITERS):
 
         # ------------------------------------------------
-        # Evaluation
+        # Periodic Evaluation
         # ------------------------------------------------
 
         if step % EVAL_INTERVAL == 0:
@@ -265,20 +238,13 @@ def main():
             )
 
         # ------------------------------------------------
-        # Get Batch
+        # Get Training Batch
         # ------------------------------------------------
 
-        x, y = dataset.get_batch(
-            "train"
-        )
+        x, y = dataset.get_batch("train")
 
-        x = x.to(
-            DEVICE
-        )
-
-        y = y.to(
-            DEVICE
-        )
+        x = x.to(DEVICE)
+        y = y.to(DEVICE)
 
         # ------------------------------------------------
         # Forward Pass
@@ -332,6 +298,50 @@ def main():
     )
 
     # ==================================================
+    # Save Model Checkpoint
+    # ==================================================
+
+    checkpoint_directory = os.path.dirname(
+        CHECKPOINT_PATH
+    )
+
+    if checkpoint_directory:
+        os.makedirs(
+            checkpoint_directory,
+            exist_ok=True
+        )
+
+    checkpoint = {
+        "model_state_dict": model.state_dict(),
+
+        "vocab_size": tokenizer.vocab_size,
+
+        "embedding_size": EMBEDDING_SIZE,
+
+        "num_heads": NUM_HEADS,
+
+        "num_layers": NUM_LAYERS,
+
+        "block_size": BLOCK_SIZE,
+
+        "train_loss": final_losses["train"],
+
+        "validation_loss": final_losses["val"],
+    }
+
+    torch.save(
+        checkpoint,
+        CHECKPOINT_PATH
+    )
+
+    print("\nModel Checkpoint Saved")
+    print("=" * 60)
+
+    print(
+        f"Saved to: {CHECKPOINT_PATH}"
+    )
+
+    # ==================================================
     # Text Generation
     # ==================================================
 
@@ -361,9 +371,7 @@ def main():
         .tolist()
     )
 
-    print(
-        generated_text
-    )
+    print(generated_text)
 
 
 # ======================================================

@@ -1,5 +1,5 @@
 """
-Global configuration for the language model project.
+Global configuration for the GPT language model.
 """
 
 # ======================================================
@@ -10,23 +10,41 @@ TRAIN_RATIO = 0.90
 
 
 # ======================================================
+# Model
+# ======================================================
+
+EMBEDDING_SIZE = 32
+NUM_HEADS = 4
+NUM_LAYERS = 2
+
+
+# ======================================================
+# Context
+# ======================================================
+
+BLOCK_SIZE = 8
+
+
+# ======================================================
 # Training
 # ======================================================
 
 BATCH_SIZE = 4
-BLOCK_SIZE = 8
 
 LEARNING_RATE = 1e-3
-MAX_ITERS = 500
+
+MAX_ITERS = 1000
 
 EVAL_INTERVAL = 100
 
+EVAL_ITERS = 50
+
 
 # ======================================================
-# Text Generation
+# Generation
 # ======================================================
 
-GENERATE_TOKENS = 200
+GENERATE_TOKENS = 300
 
 
 # ======================================================
@@ -40,4 +58,4 @@ RANDOM_SEED = 1337
 # Device
 # ======================================================
 
-DEVICE = "cuda"
+DEVICE = "cuda" if __import__("torch").cuda.is_available() else "cpu"

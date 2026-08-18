@@ -5,11 +5,16 @@ from config import (
     LEARNING_RATE,
     MAX_ITERS,
     EVAL_INTERVAL,
+    EVAL_ITERS,
     GENERATE_TOKENS,
+    EMBEDDING_SIZE,
+    NUM_HEADS,
+    NUM_LAYERS,
+    DEVICE,
 )
 
 from dataset import TextDataset
-from model import BigramLanguageModel
+from model import GPTLanguageModel
 from tokenizer import CharacterTokenizer
 
 
@@ -17,7 +22,9 @@ from tokenizer import CharacterTokenizer
 # Reproducibility
 # ======================================================
 
-torch.manual_seed(RANDOM_SEED)
+torch.manual_seed(
+    RANDOM_SEED
+)
 
 
 # ======================================================
@@ -25,29 +32,48 @@ torch.manual_seed(RANDOM_SEED)
 # ======================================================
 
 @torch.no_grad()
-def estimate_loss(model, dataset, eval_iters=100):
+def estimate_loss(
+    model,
+    dataset
+):
     """
-    Estimate average loss on the training and
-    validation datasets.
+    Estimate average training and validation loss.
     """
 
     model.eval()
 
     losses = {}
 
-    for split in ["train", "val"]:
+    for split in [
+        "train",
+        "val"
+    ]:
 
-        split_losses = torch.zeros(eval_iters)
+        split_losses = torch.zeros(
+            EVAL_ITERS
+        )
 
-        for k in range(eval_iters):
+        for k in range(
+            EVAL_ITERS
+        ):
 
-            x, y = dataset.get_batch(split)
+            x, y = dataset.get_batch(
+                split
+            )
 
-            _, loss = model(x, y)
+            x = x.to(DEVICE)
+            y = y.to(DEVICE)
+
+            _, loss = model(
+                x,
+                y
+            )
 
             split_losses[k] = loss.item()
 
-        losses[split] = split_losses.mean().item()
+        losses[split] = (
+            split_losses.mean().item()
+        )
 
     model.train()
 
@@ -55,32 +81,31 @@ def estimate_loss(model, dataset, eval_iters=100):
 
 
 # ======================================================
-# Data Loading
+# Load Text
 # ======================================================
 
 def load_text(path):
     """
     Load the training corpus.
-
-    Args:
-        path: Path to the text file.
-
-    Returns:
-        The complete text corpus as a string.
     """
 
-    with open(path, "r", encoding="utf-8") as file:
+    with open(
+        path,
+        "r",
+        encoding="utf-8"
+    ) as file:
+
         return file.read()
 
 
 # ======================================================
-# Main Training Pipeline
+# Main
 # ======================================================
 
 def main():
 
     # ==================================================
-    # Load Dataset
+    # Load Corpus
     # ==================================================
 
     text = load_text(
@@ -88,43 +113,48 @@ def main():
     )
 
     print("=" * 60)
-    print("Preview")
+    print("GPT Training Pipeline")
     print("=" * 60)
 
-    print(text[:300])
+    print("\nCorpus Preview")
+    print("-" * 60)
+
+    print(
+        text[:300]
+    )
 
     # ==================================================
     # Tokenizer
     # ==================================================
 
-    tokenizer = CharacterTokenizer(text)
+    tokenizer = CharacterTokenizer(
+        text
+    )
 
     print(
         "\nVocabulary Size:",
         tokenizer.vocab_size
     )
 
-    sample = "hello"
+    # ==================================================
+    # Encode Dataset
+    # ==================================================
 
-    encoded = tokenizer.encode(sample)
-
-    print("\nOriginal :", sample)
-    print("Encoded  :", encoded)
-    print(
-        "Decoded  :",
-        tokenizer.decode(encoded)
+    encoded_text = tokenizer.encode(
+        text
     )
 
-    # ==================================================
-    # Dataset
-    # ==================================================
+    dataset = TextDataset(
+        encoded_text
+    )
 
-    encoded_text = tokenizer.encode(text)
+    train_data = (
+        dataset.get_train_data()
+    )
 
-    dataset = TextDataset(encoded_text)
-
-    train_data = dataset.get_train_data()
-    val_data = dataset.get_validation_data()
+    validation_data = (
+        dataset.get_validation_data()
+    )
 
     print("\nDataset Information")
     print("=" * 60)
@@ -136,78 +166,63 @@ def main():
 
     print(
         f"Validation Tokens : "
-        f"{len(val_data)}"
+        f"{len(validation_data)}"
     )
 
-    print("\nTraining Preview")
+    # ==================================================
+    # Device
+    # ==================================================
 
     print(
-        train_data[:100]
-    )
-
-    print(
-        f"\nShape : "
-        f"{train_data.shape}"
-    )
-
-    print(
-        f"Type  : "
-        f"{train_data.dtype}"
+        "\nDevice:",
+        DEVICE
     )
 
     # ==================================================
-    # Batch Generation
+    # Create GPT Model
     # ==================================================
 
-    x, y = dataset.get_batch()
-
-    print("\nBatch Information")
-    print("=" * 60)
-
-    print("\nInputs")
-    print(x)
-
-    print("\nTargets")
-    print(y)
-
-    # ==================================================
-    # Bigram Language Model
-    # ==================================================
-
-    model = BigramLanguageModel(
-        tokenizer.vocab_size
+    model = GPTLanguageModel(
+        vocab_size=tokenizer.vocab_size,
+        embedding_size=EMBEDDING_SIZE,
+        num_heads=NUM_HEADS,
+        num_layers=NUM_LAYERS
     )
 
-    print("\nModel Architecture")
-    print("=" * 60)
-
-    print(model)
-
-    # ==================================================
-    # Initial Forward Pass
-    # ==================================================
-
-    logits, initial_loss = model(
-        x,
-        y
+    model = model.to(
+        DEVICE
     )
 
-    print("\nInitial Model Information")
+    # ==================================================
+    # Model Information
+    # ==================================================
+
+    parameter_count = sum(
+        parameter.numel()
+        for parameter in model.parameters()
+    )
+
+    print("\nModel Information")
     print("=" * 60)
 
     print(
-        "Input Shape :",
-        x.shape
+        "Embedding Size:",
+        EMBEDDING_SIZE
     )
 
     print(
-        "Logits Shape:",
-        logits.shape
+        "Attention Heads:",
+        NUM_HEADS
     )
 
     print(
-        "Initial Loss:",
-        initial_loss.item()
+        "Transformer Layers:",
+        NUM_LAYERS
+    )
+
+    print(
+        "Total Parameters:",
+        parameter_count
     )
 
     # ==================================================
@@ -220,16 +235,18 @@ def main():
     )
 
     # ==================================================
-    # Training Loop
+    # Training
     # ==================================================
 
     print("\nStarting Training")
     print("=" * 60)
 
-    for step in range(MAX_ITERS):
+    for step in range(
+        MAX_ITERS
+    ):
 
         # ------------------------------------------------
-        # Evaluate periodically
+        # Evaluation
         # ------------------------------------------------
 
         if step % EVAL_INTERVAL == 0:
@@ -248,11 +265,19 @@ def main():
             )
 
         # ------------------------------------------------
-        # Get training batch
+        # Get Batch
         # ------------------------------------------------
 
         x, y = dataset.get_batch(
             "train"
+        )
+
+        x = x.to(
+            DEVICE
+        )
+
+        y = y.to(
+            DEVICE
         )
 
         # ------------------------------------------------
@@ -313,36 +338,36 @@ def main():
     print("\nGenerated Text")
     print("=" * 60)
 
-    # Starting character.
     start_text = "D"
 
-    # Convert starting character to token ID.
     start_tokens = tokenizer.encode(
         start_text
     )
 
-    # Convert token IDs to a PyTorch tensor.
     context = torch.tensor(
         [start_tokens],
-        dtype=torch.long
+        dtype=torch.long,
+        device=DEVICE
     )
 
-    # Generate new tokens.
     generated_tokens = model.generate(
         context,
         max_new_tokens=GENERATE_TOKENS
     )
 
-    # Convert generated token IDs back to text.
     generated_text = tokenizer.decode(
-        generated_tokens[0].tolist()
+        generated_tokens[0]
+        .cpu()
+        .tolist()
     )
 
-    print(generated_text)
+    print(
+        generated_text
+    )
 
 
 # ======================================================
-# Program Entry Point
+# Entry Point
 # ======================================================
 
 if __name__ == "__main__":

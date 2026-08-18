@@ -1,92 +1,138 @@
 import torch
 
-from config import TRAIN_RATIO, BLOCK_SIZE, BATCH_SIZE
+from config import (
+    BLOCK_SIZE,
+    BATCH_SIZE,
+    TRAIN_RATIO,
+)
 
 
 class TextDataset:
     """
-    Handles dataset preparation and batch generation
-    for language model training.
+    Dataset for character-level language modeling.
+
+    The dataset creates input/target pairs where the target
+    is the input sequence shifted one character to the right.
     """
 
-    def __init__(
-        self,
-        encoded_text,
-        train_ratio=TRAIN_RATIO,
-        block_size=BLOCK_SIZE,
-        batch_size=BATCH_SIZE,
-    ):
-        """
-        Initialize the dataset.
-
-        Args:
-            encoded_text: List of integer token IDs.
-            train_ratio: Fraction of data used for training.
-            block_size: Number of tokens in each input sequence.
-            batch_size: Number of sequences per batch.
-        """
+    def __init__(self, data):
 
         self.data = torch.tensor(
-            encoded_text,
+            data,
             dtype=torch.long
         )
 
         split_index = int(
-            len(self.data) * train_ratio
+            TRAIN_RATIO * len(self.data)
         )
 
-        self.train_data = self.data[:split_index]
-        self.val_data = self.data[split_index:]
+        self.train_data = self.data[
+            :split_index
+        ]
 
-        self.block_size = block_size
-        self.batch_size = batch_size
+        self.validation_data = self.data[
+            split_index:
+        ]
+
+    # ==================================================
+    # Dataset Access
+    # ==================================================
 
     def get_train_data(self):
         """
-        Return the training data.
+        Return the training tokens.
         """
+
         return self.train_data
 
     def get_validation_data(self):
         """
-        Return the validation data.
+        Return the validation tokens.
         """
-        return self.val_data
 
-    def get_batch(self, split="train"):
+        return self.validation_data
+
+    # ==================================================
+    # Batch Generation
+    # ==================================================
+
+    def get_batch(
+        self,
+        split="train"
+    ):
         """
-        Generate a random batch of input and target sequences.
+        Generate a random batch.
 
         Args:
-            split: Either 'train' or 'val'.
+            split:
+                "train" or "val"
 
         Returns:
-            x: Input token sequences.
-            y: Target token sequences.
+            x:
+                Input token sequences.
+
+            y:
+                Target token sequences.
         """
 
         if split == "train":
+
             data = self.train_data
-        elif split == "val":
-            data = self.val_data
+
+        elif split in ["val", "validation"]:
+
+            data = self.validation_data
+
         else:
+
             raise ValueError(
-                "split must be either 'train' or 'val'"
+                "split must be 'train' or 'val'"
             )
 
-        indices = torch.randint(
-            len(data) - self.block_size,
-            (self.batch_size,)
+        # ------------------------------------------------
+        # Random starting positions
+        # ------------------------------------------------
+
+        max_start = (
+            len(data)
+            - BLOCK_SIZE
+            - 1
         )
 
-        x = torch.stack([
-            data[i:i + self.block_size]
-            for i in indices
-        ])
+        starts = torch.randint(
+            0,
+            max_start,
+            (
+                BATCH_SIZE,
+            )
+        )
 
-        y = torch.stack([
-            data[i + 1:i + self.block_size + 1]
-            for i in indices
-        ])
+        # ------------------------------------------------
+        # Input sequences
+        # ------------------------------------------------
+
+        x = torch.stack(
+            [
+                data[
+                    start:
+                    start + BLOCK_SIZE
+                ]
+                for start in starts
+            ]
+        )
+
+        # ------------------------------------------------
+        # Target sequences
+        # ------------------------------------------------
+
+        y = torch.stack(
+            [
+                data[
+                    start + 1:
+                    start + BLOCK_SIZE + 1
+                ]
+                for start in starts
+            ]
+        )
 
         return x, y
